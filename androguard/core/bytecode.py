@@ -198,20 +198,6 @@ class Buff:
 _Bytecode = BuffHandle
 
 
-def FormatClassToJava(i):
-    """
-    Transform a java class name into the typed variant found in DEX files.
-
-    example::
-
-
-
-    :param i: the input class name
-    :rtype: str
-    """
-    return "L" + i.replace(".", "/") + ";"
-
-
 def FormatClassToPython(i):
     """
     Transform a typed class name into a form which can be used as a python
@@ -226,41 +212,6 @@ def FormatClassToPython(i):
     i = i.replace("$", "_")
 
     return i
-
-
-def get_package_class_name(name):
-    """
-    Return package and class name in a java variant from a typed variant name.
-
-    If no package could be found, the package is an empty string.
-
-    If the name is an array type, the array is discarded.
-
-
-
-    :param name: the name
-    :rtype: tuple
-    :return:
-    """
-    # name is MUTF8, so make sure we get the string variant
-    name = str(name)
-    if name[-1] != ';':
-        raise ValueError("The name '{}' does not look like a typed name!".format(name))
-
-    # discard array types, there might be many...
-    name = name.lstrip('[')
-
-    if name[0] != 'L':
-        raise ValueError("The name '{}' does not look like a typed name!".format(name))
-
-    name = name[1:-1]
-    if '/' not in name:
-        return '', name
-
-    package, clsname = name.rsplit('/', 1)
-    package = package.replace('/', '.')
-
-    return package, clsname
 
 
 def FormatNameToPython(i):
