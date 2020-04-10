@@ -1,5 +1,3 @@
-from androguard.session import Session
-from androguard.decompiler import decompiler
 from androguard.core import androconf
 import hashlib
 import re
@@ -10,19 +8,8 @@ from androguard.core.analysis.analysis import Analysis
 
 import logging
 import warnings
+
 log = logging.getLogger("androguard.misc")
-
-
-def get_default_session():
-    """
-    Return the default Session from the configuration
-    or create a new one, if the session in the configuration is None.
-
-    :rtype: androguard.session.Session
-    """
-    if androconf.CONF["SESSION"] is None:
-        androconf.CONF["SESSION"] = Session()
-    return androconf.CONF["SESSION"]
 
 
 def AnalyzeAPK(_file, session=None, raw=False):
@@ -220,7 +207,7 @@ def clean_file_name(filename, unique=True, replace="_", force_nt=False):
     if len(fname) > PATH_MAX_LENGTH:
         if "." in fname:
             f, ext = fname.rsplit(".", 1)
-            fname = "{}.{}".format(f[:PATH_MAX_LENGTH-(len(ext)+1)], ext)
+            fname = "{}.{}".format(f[:PATH_MAX_LENGTH - (len(ext) + 1)], ext)
         else:
             fname = fname[:PATH_MAX_LENGTH]
 
@@ -243,5 +230,3 @@ def clean_file_name(filename, unique=True, replace="_", force_nt=False):
             counter += 1
 
     return os.path.join(path, fname)
-
-
