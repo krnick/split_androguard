@@ -1,13 +1,15 @@
-import re
 import collections
-from operator import itemgetter
+import logging
+import re
 import time
+from enum import IntEnum
+from operator import itemgetter
+
+import networkx as nx
+
+from androguard.core import bytecode, mutf8
 from androguard.core.androconf import is_ascii_problem, load_api_specific_resource_module
 from androguard.core.bytecodes import dvm
-import logging
-from androguard.core import bytecode, mutf8
-import networkx as nx
-from enum import IntEnum
 
 log = logging.getLogger("androguard.analysis")
 
@@ -46,6 +48,7 @@ class DVMBasicBlock:
     A basic block consists of a series of :class:`~androguard.core.bytecodes.dvm.Instruction`
     which are not interrupted by branch or jump instructions such as `goto`, `if`, `throw`, `return`, `switch` etc.
     """
+
     def __init__(self, start, vm, method, context):
         self.__vm = vm
         self.method = method
@@ -221,6 +224,7 @@ class BasicBlocks:
 
     It is a collection of many :class:`DVMBasicBlock`.
     """
+
     def __init__(self):
         self.bb = []
 
@@ -337,6 +341,7 @@ class MethodAnalysis:
     :type vm: a :class:`DalvikVMFormat` object
     :type method: a :class:`EncodedMethod` object
     """
+
     def __init__(self, vm, method):
         self.__vm = vm
         self.method = method
@@ -667,10 +672,10 @@ class MethodAnalysis:
             args = ["{} v{}".format(a, start_reg + i) for i, a in enumerate(args)]
 
         print("METHOD {} {} {} ({}){}".format(
-              self.method.get_class_name(),
-              self.method.get_access_flags_string(),
-              self.method.get_name(),
-              ", ".join(args), ret))
+            self.method.get_class_name(),
+            self.method.get_access_flags_string(),
+            self.method.get_name(),
+            ", ".join(args), ret))
         bytecode.PrettyShow(self.basic_blocks.gets(), self.method.notes)
 
     def show_xrefs(self):
@@ -699,6 +704,7 @@ class StringAnalysis:
 
     This Array stores the information in which method the String is used.
     """
+
     def __init__(self, value):
         """
 
@@ -788,6 +794,7 @@ class FieldAnalysis:
 
     :param androguard.core.bytecodes.dvm.EncodedField field: `dvm.EncodedField`
     """
+
     def __init__(self, field):
         self.field = field
         self.xrefread = set()
@@ -875,6 +882,7 @@ class ExternalClass:
 
     :param name: Name of the external class
     """
+
     def __init__(self, name):
         self.name = name
         self.methods = []
@@ -915,6 +923,7 @@ class ExternalMethod:
     :param str name: name of the method
     :param List[str] descriptor: descriptor string
     """
+
     def __init__(self, class_name, name, descriptor):
         self.class_name = class_name
         self.name = name
@@ -1306,7 +1315,7 @@ class ClassAnalysis:
 
     def __repr__(self):
         return "<analysis.ClassAnalysis {}{}>".format(self.orig_class.get_name(),
-                " EXTERNAL" if isinstance(self.orig_class, ExternalClass) else "")
+                                                      " EXTERNAL" if isinstance(self.orig_class, ExternalClass) else "")
 
     def __str__(self):
         # Print only instantiation from other classes here
@@ -1341,6 +1350,7 @@ class MethodClassAnalysis(MethodAnalysis):
         This method is just here for compatability
 
     """
+
     def __init__(self, meth):
         super().__init__(meth.cm.vm, meth)
 
@@ -1368,6 +1378,7 @@ class Analysis:
 
     :param Optional[androguard.core.bytecodes.dvm.DalvikVMFormat] vm: inital DalvikVMFormat object (default None)
     """
+
     def __init__(self, vm=None):
         # Contains DalvikVMFormat objects
         self.vms = []
@@ -1760,7 +1771,7 @@ class Analysis:
                 yield c
 
     def find_methods(self, classname=".*", methodname=".*", descriptor=".*",
-            accessflags=".*", no_external=False):
+                     accessflags=".*", no_external=False):
         """
         Find a method by name using regular expression.
         This method will return all MethodAnalysis objects, which match the
@@ -1786,8 +1797,8 @@ class Analysis:
                     if no_external and isinstance(z, ExternalMethod):
                         continue
                     if re.match(methodname, z.get_name()) and \
-                       re.match(descriptor, z.get_descriptor()) and \
-                       re.match(accessflags, z.get_access_flags_string()):
+                            re.match(descriptor, z.get_descriptor()) and \
+                            re.match(accessflags, z.get_access_flags_string()):
                         yield m
 
     def find_strings(self, string=".*"):
@@ -1820,12 +1831,15 @@ class Analysis:
                 for f in c.get_fields():
                     z = f.get_field()
                     if re.match(fieldname, z.get_name()) and \
-                       re.match(fieldtype, z.get_descriptor()) and \
-                       re.match(accessflags, z.get_access_flags_string()):
+                            re.match(fieldtype, z.get_descriptor()) and \
+                            re.match(accessflags, z.get_access_flags_string()):
                         yield f
 
     def __repr__(self):
-        return "<analysis.Analysis VMs: {}, Classes: {}, Methods: {}, Strings: {}>".format(len(self.vms), len(self.classes), len(self.methods), len(self.strings))
+        return "<analysis.Analysis VMs: {}, Classes: {}, Methods: {}, Strings: {}>".format(len(self.vms),
+                                                                                           len(self.classes),
+                                                                                           len(self.methods),
+                                                                                           len(self.strings))
 
     def get_call_graph(self, classname=".*", methodname=".*", descriptor=".*",
                        accessflags=".*", no_isolated=False, entry_points=[]):
@@ -1913,49 +1927,6 @@ class Analysis:
                 CG.add_edge(caller, m, key=offset, offset=offset)
 
         return CG
-
-    def create_ipython_exports(self):
-        """
-        .. warning:: this feature is experimental and is currently not enabled by default! Use with caution!
-
-        Creates attributes for all classes, methods and fields on the Analysis object itself.
-        This makes it easier to work with Analysis module in an iPython shell.
-
-        Classes can be search by typing :code:`dx.CLASS_<tab>`, as each class is added via this attribute name.
-        Each class will have all methods attached to it via :code:`dx.CLASS_Foobar.METHOD_<tab>`.
-        Fields have a similar syntax: :code:`dx.CLASS_Foobar.FIELD_<tab>`.
-
-        As Strings can contain nearly anything, use :meth:`find_strings` instead.
-
-        * Each `CLASS_` item will return a :class:`~ClassAnalysis`
-        * Each `METHOD_` item will return a :class:`~MethodAnalysis`
-        * Each `FIELD_` item will return a :class:`~FieldAnalysis`
-        """
-        # TODO: it would be fun to have the classes organized like the packages. I.e. you could do dx.CLASS_xx.yyy.zzz
-        for cls in self.get_classes():
-            name = "CLASS_" + bytecode.FormatClassToPython(cls.name)
-            if hasattr(self, name):
-                log.warning("Already existing class {}!".format(name))
-            setattr(self, name, cls)
-
-            for meth in cls.get_methods():
-                method_name = meth.name
-                if method_name in ["<init>", "<clinit>"]:
-                    _, method_name = bytecode.get_package_class_name(cls.name)
-
-                # FIXME this naming schema is not very good... but to describe a method uniquely, we need all of it
-                mname = "METH_" + method_name + "_" + bytecode.FormatDescriptorToPython(meth.access) + "_" + bytecode.FormatDescriptorToPython(meth.descriptor)
-                if hasattr(cls, mname):
-                    log.warning("already existing method: {} at class {}".format(mname, name))
-                setattr(cls, mname, meth)
-
-            # FIXME: syntetic classes produce problems here.
-            # If the field name is the same in the parent as in the syntetic one, we can only add one!
-            for field in cls.get_fields():
-                mname = "FIELD_" + bytecode.FormatNameToPython(field.name)
-                if hasattr(cls, mname):
-                    log.warning("already existing field: {} at class {}".format(mname, name))
-                setattr(cls, mname, field)
 
     def get_permissions(self, apilevel=None):
         """
